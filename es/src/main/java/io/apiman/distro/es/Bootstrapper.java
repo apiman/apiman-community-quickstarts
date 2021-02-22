@@ -15,22 +15,19 @@
  */
 package io.apiman.distro.es;
 
-import io.apiman.common.es.util.ApimanEmbeddedElastic;
-import io.apiman.common.es.util.ApimanEmbeddedElastic.Builder;
-
+import io.apiman.common.es.util.EsConstants;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.Properties;
-import java.util.concurrent.TimeUnit;
-
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
-
-import pl.allegro.tech.embeddedelasticsearch.PopularProperties;
+import org.testcontainers.containers.wait.strategy.Wait;
+import org.testcontainers.elasticsearch.ElasticsearchContainer;
 
 /**
  * Starts up an embedded elasticsearch cluster.  This is useful when running
@@ -42,7 +39,7 @@ import pl.allegro.tech.embeddedelasticsearch.PopularProperties;
 @SuppressWarnings("nls")
 public class Bootstrapper implements ServletContextListener {
 
-    private ApimanEmbeddedElastic node;
+    private static ElasticsearchContainer node;
 
     /**
      * @see javax.servlet.ServletContextListener#contextInitialized(javax.servlet.ServletContextEvent)
@@ -51,23 +48,10 @@ public class Bootstrapper implements ServletContextListener {
     public void contextInitialized(ServletContextEvent sce) {
         DistroESConfig config = new DistroESConfig();
 
-        File esHome = getDataDir();
-        if (esHome == null) {
-            System.out.println("--------------------------------------------------------------");
-            System.err.println("No apiman-es data directory found.  Embedded ES *not* started.");
-            System.out.println("--------------------------------------------------------------");
-            return;
-        }
-        if (!esHome.exists()) {
-            esHome.mkdirs();
-        }
-
         System.out.println("------------------------------------------------------------");
         System.out.println("Starting apiman-es.");
         System.out.println("   HTTP Ports:      " + config.getHttpPortRange());
-        System.out.println("   Transport Ports: " + config.getTransportPortRange());
         System.out.println("   Bind Host:       " + config.getBindHost());
-        System.out.println("   ES Data Dir:     " + esHome);
         System.out.println("------------------------------------------------------------");
 
         String clusterName = "apiman";
@@ -76,23 +60,33 @@ public class Bootstrapper implements ServletContextListener {
             URL esDistroUrl = resolveEsDistro(sce);
             File tmpDir = new File(getTempDir());
 
-            Builder builder = ApimanEmbeddedElastic.builder()
-                .withPort(config.getHttpPortRange())
-                .withDownloadUrl(esDistroUrl)
-                .withDownloadDirectory(tmpDir)
-                .withInstallationDirectory(tmpDir)
-                .withSetting("path.data", esHome)
-                .withCleanInstallationDirectoryOnStop(false)
-                .withSetting(PopularProperties.TRANSPORT_TCP_PORT, config.getTransportPortRange())
-                .withSetting(PopularProperties.CLUSTER_NAME, clusterName)
-                .withStartTimeout(1, TimeUnit.MINUTES);
+            node = new FixedPortEsContainer(
+                 "docker.elastic.co/elasticsearch/elasticsearch-oss:" + EsConstants.getEsVersion())
+                 .withFixedExposedPortRange(config.getHttpPortRange())
+                 .withStartupTimeout(Duration.ofHours(1))
+                 .waitingFor(Wait.forHttp("/"));
 
-            if (config.getBindHost() != null) {
-                builder.withSetting("network.bind_host", config.getBindHost());
-            }
+            System.out.println("If you have never downloaded elasticsearch before, this may take a few moments...");
 
-            node = builder.build().start();
-        } catch (IOException | InterruptedException e) {
+            node.start();
+//
+//            Builder builder = ApimanEmbeddedElastic.builder()
+//                .withPort(config.getHttpPortRange())
+//                .withDownloadUrl(esDistroUrl)
+//                .withDownloadDirectory(tmpDir)
+//                .withInstallationDirectory(tmpDir)
+//                .withSetting("path.data", esHome)
+//                .withCleanInstallationDirectoryOnStop(false)
+//                .withSetting(PopularProperties.TRANSPORT_TCP_PORT, config.getTransportPortRange())
+//                .withSetting(PopularProperties.CLUSTER_NAME, clusterName)
+//                .withStartTimeout(1, TimeUnit.MINUTES);
+//
+//            if (config.getBindHost() != null) {
+//                builder.withSetting("network.bind_host", config.getBindHost());
+//            }
+//
+//            node = builder.build().start();
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
@@ -106,39 +100,6 @@ public class Bootstrapper implements ServletContextListener {
             return System.getProperty("jboss.server.temp.dir");
         }
         return System.getProperty("java.io.tmpdir");
-    }
-
-    /**
-     * @return the ES data directory
-     */
-    private static File getDataDir() {
-        File esHome = null;
-
-        // First check to see if a data directory has been explicitly configured via system property
-        String dataDir = System.getProperty("apiman.distro-es.data_dir");
-        if (dataDir != null) {
-            esHome = new File(dataDir, "es");
-        }
-
-        // If that wasn't set, then check to see if we're running in wildfly/eap
-        if (esHome == null) {
-            dataDir = System.getProperty("jboss.server.data.dir");
-            if (dataDir != null) {
-                esHome = new File(dataDir, "es");
-            }
-        }
-
-        // If that didn't work, try to locate a tomcat data directory
-        if (esHome == null) {
-            dataDir = System.getProperty("catalina.home");
-            if (dataDir != null) {
-                esHome = new File(dataDir, "data/es");
-            }
-        }
-
-        // If all else fails, just let it return null
-
-        return esHome;
     }
 
     private URL resolveEsDistro(ServletContextEvent sce) throws MalformedURLException {
@@ -170,16 +131,16 @@ public class Bootstrapper implements ServletContextListener {
      */
     @Override
     public void contextDestroyed(ServletContextEvent sce) {
-        if (node != null) {
-            try {
-                node.stop();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            System.out.println("-----------------------------");
-            System.out.println("apiman-es stopped!");
-            System.out.println("-----------------------------");
-        }
-    }
+//        if (node != null) {
+//            try {
+//                node.stop();
+//            } catch (IOException e) {
+//                throw new RuntimeException(e);
+//            }
+        node.stop();
 
+        System.out.println("-----------------------------");
+        System.out.println("apiman-es stopped!");
+        System.out.println("-----------------------------");
+    }
 }

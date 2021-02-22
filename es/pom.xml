@@ -14,6 +14,12 @@
   <dependencies>
     <dependency>
       <groupId>io.apiman</groupId>
+      <artifactId>apiman-gateway-engine-es</artifactId>
+      <version>${version.apiman}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.apiman</groupId>
       <artifactId>apiman-common-es</artifactId>
       <version>${version.apiman}</version>
     </dependency>
@@ -37,10 +43,21 @@
     </dependency>
 
     <dependency>
-      <groupId>org.jboss.spec.javax.servlet</groupId>
-      <artifactId>jboss-servlet-api_3.0_spec</artifactId>
-      <version>${version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.0_spec}</version>
-      <scope>provided</scope>
+      <groupId>jakarta.servlet</groupId>
+      <artifactId>jakarta.servlet-api</artifactId>
+      <version>${version.jakarta.servlet}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>testcontainers</artifactId>
+      <version>1.15.2</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>elasticsearch</artifactId>
+      <version>1.15.2</version>
     </dependency>
   </dependencies>
   
