@@ -69,23 +69,6 @@ public class Bootstrapper implements ServletContextListener {
             System.out.println("If you have never downloaded elasticsearch before, this may take a few moments...");
 
             node.start();
-//
-//            Builder builder = ApimanEmbeddedElastic.builder()
-//                .withPort(config.getHttpPortRange())
-//                .withDownloadUrl(esDistroUrl)
-//                .withDownloadDirectory(tmpDir)
-//                .withInstallationDirectory(tmpDir)
-//                .withSetting("path.data", esHome)
-//                .withCleanInstallationDirectoryOnStop(false)
-//                .withSetting(PopularProperties.TRANSPORT_TCP_PORT, config.getTransportPortRange())
-//                .withSetting(PopularProperties.CLUSTER_NAME, clusterName)
-//                .withStartTimeout(1, TimeUnit.MINUTES);
-//
-//            if (config.getBindHost() != null) {
-//                builder.withSetting("network.bind_host", config.getBindHost());
-//            }
-//
-//            node = builder.build().start();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
