@@ -37,10 +37,6 @@ public class DistroESConfig extends CompositeConfiguration {
         return getString("apiman.distro-es.http-port-range", "19200-19300"); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
-    public String getTransportPortRange() {
-        return getString("apiman.distro-es.transport-port-range", "19300-19400"); //$NON-NLS-1$ //$NON-NLS-2$
-    }
-
     public String getBindHost() {
         return getString("apiman.distro-es.network.bind_host", null); //$NON-NLS-1$
     }
